@@ -1,0 +1,15 @@
+{
+  "name": "ai-logo-brand-kit-generator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "bash start.sh",
+    "server": "cd server && npx nodemon index.js",
+    "client": "cd client && npm start",
+    "seed": "cd server && node seed.js",
+    "install-all": "cd server && npm install && cd ../client && npm install"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
