@@ -1,19 +1,28 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const { aiRateLimiter } = require('../middleware/rateLimiter');
 const pool = require('../config/db');
 const { generateWithAI } = require('../services/openrouter');
 
 function createFeatureRoute({ tableName, columns, systemPrompt, generateUserPrompt }) {
   const router = express.Router();
 
-  // GET all items
+  // GET all items with pagination
   router.get('/', auth, async (req, res) => {
     try {
+      const userId = req.user.id;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const offset = (page - 1) * limit;
+
+      const countResult = await pool.query(`SELECT COUNT(*) FROM ${tableName} WHERE user_id = $1`, [userId]);
+      const total = parseInt(countResult.rows[0].count);
+
       const result = await pool.query(
-        `SELECT * FROM ${tableName} WHERE user_id = $1 ORDER BY created_at DESC`,
-        [req.user.id]
+        `SELECT * FROM ${tableName} WHERE user_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
       );
-      res.json(result.rows);
+      res.json({ data: result.rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
     } catch (err) {
       console.error(`Error fetching ${tableName}:`, err);
       res.status(500).json({ error: `Failed to fetch ${tableName}.` });
@@ -110,8 +119,8 @@ function createFeatureRoute({ tableName, columns, systemPrompt, generateUserProm
     }
   });
 
-  // POST generate with AI
-  router.post('/generate', auth, async (req, res) => {
+  // POST generate with AI (rate-limited)
+  router.post('/generate', auth, aiRateLimiter, async (req, res) => {
     try {
       const userPrompt = generateUserPrompt(req.body);
       const aiResult = await generateWithAI(systemPrompt, userPrompt);

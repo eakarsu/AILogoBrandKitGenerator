@@ -1,5 +1,14 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
+function parseAIJson(text) {
+  try { return JSON.parse(text); } catch(e) {}
+  const stripped = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  try { return JSON.parse(stripped); } catch(e) {}
+  const start = text.indexOf('{'); const end = text.lastIndexOf('}');
+  if (start !== -1 && end !== -1) { try { return JSON.parse(text.slice(start, end + 1)); } catch(e) {} }
+  return null;
+}
+
 async function generateWithAI(systemPrompt, userPrompt) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -10,7 +19,7 @@ async function generateWithAI(systemPrompt, userPrompt) {
       'X-Title': 'AI Brand Kit Generator'
     },
     body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5',
+      model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -28,23 +37,9 @@ async function generateWithAI(systemPrompt, userPrompt) {
   const data = await response.json();
   const content = data.choices[0].message.content;
 
-  // Try to parse JSON from the response, handling markdown code fences
-  let cleaned = content.trim();
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.slice(7);
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith('```')) {
-    cleaned = cleaned.slice(0, -3);
-  }
-  cleaned = cleaned.trim();
-
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    return { raw_content: content };
-  }
+  const parsed = parseAIJson(content);
+  if (parsed) return parsed;
+  return { raw_content: content };
 }
 
-module.exports = { generateWithAI };
+module.exports = { generateWithAI, parseAIJson };
