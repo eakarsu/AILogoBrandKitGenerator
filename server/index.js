@@ -44,6 +44,7 @@ app.use('/api/style-guides', require('./routes/styleGuides'));
 app.use('/api/brands', require('./routes/brands'));
 app.use('/api/ai/brand-check', require('./routes/brandCheck'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/trademark-clearance-matrix', require('./routes/trademarkClearanceMatrix'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
