@@ -2,6 +2,13 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
+if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SEED !== 'true') {
+  throw new Error('Demo seed is disabled; set ALLOW_DEMO_SEED=true outside production');
+}
+if (!process.env.DEMO_SEED_PASSWORD || process.env.DEMO_SEED_PASSWORD.length < 12) {
+  throw new Error('DEMO_SEED_PASSWORD must contain at least 12 characters');
+}
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function seed() {
@@ -166,13 +173,14 @@ async function seed() {
   `);
 
   // Create demo user
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  const demoEmail = process.env.DEMO_EMAIL || 'demo@brandkit.com';
+  const hashedPassword = await bcrypt.hash(process.env.DEMO_SEED_PASSWORD, 12);
   await pool.query(`
-    INSERT INTO users (name, email, password) VALUES ('Demo User', 'demo@brandkit.com', $1)
-    ON CONFLICT (email) DO NOTHING
-  `, [hashedPassword]);
+    INSERT INTO users (name, email, password) VALUES ('Demo User', $1, $2)
+    ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password
+  `, [demoEmail, hashedPassword]);
 
-  const userResult = await pool.query(`SELECT id FROM users WHERE email = 'demo@brandkit.com'`);
+  const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [demoEmail]);
   const userId = userResult.rows[0].id;
 
   // Clear existing seed data for this user
@@ -413,7 +421,7 @@ async function seed() {
   }
 
   console.log('✅ Seeded 15 items for each of 10 features (150 total items)');
-  console.log('📧 Login: demo@brandkit.com / password123');
+  console.log(`📧 Demo identity ready for ${demoEmail}`);
   await pool.end();
 }
 

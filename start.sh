@@ -1,59 +1,15 @@
-#!/bin/bash
-set -e
-
-echo "=========================================="
-echo "  AI Logo & Brand Kit Generator"
-echo "=========================================="
-
-# Kill processes on ports 3001 and 3000
-echo "🧹 Cleaning up ports 3000 and 3001..."
-lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-lsof -ti:3001 | xargs kill -9 2>/dev/null || true
-sleep 1
-
-# Check if PostgreSQL is running
-if ! pg_isready -q 2>/dev/null; then
-  echo "⚠️  PostgreSQL is not running. Starting it..."
-  brew services start postgresql@14 2>/dev/null || brew services start postgresql 2>/dev/null || {
-    echo "❌ Could not start PostgreSQL. Please start it manually."
-    exit 1
-  }
-  sleep 2
-fi
-
-# Create database if it doesn't exist
-echo "🗄️  Setting up database..."
-createdb brandkit 2>/dev/null || true
-
-# Install dependencies
-echo "📦 Installing server dependencies..."
-cd server && npm install --silent
-cd ..
-
-echo "📦 Installing client dependencies..."
-cd client && npm install --silent
-cd ..
-
-# Install root dependencies
-npm install --silent
-
-# Seed the database
-echo "🌱 Seeding database..."
-cd server && node seed.js
-cd ..
-
-# Start both server and client with hot reload
-echo ""
-echo "=========================================="
-echo "  🚀 Starting Application"
-echo "  Server: http://localhost:3001"
-echo "  Client: http://localhost:3000"
-echo "  Login:  demo@brandkit.com / password123"
-echo "=========================================="
-echo ""
-
-npx concurrently \
-  --names "SERVER,CLIENT" \
-  --prefix-colors "cyan,magenta" \
-  "cd server && npx nodemon --watch . --ext js,json index.js" \
-  "cd client && BROWSER=none PORT=3000 npm start"
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"; cd "$ROOT"
+if [ ! -f .env ]; then echo "Missing .env; configure it before starting." >&2; exit 1; fi
+BACKEND_PORT="${BACKEND_PORT:-${PORT:-3001}}"; FRONTEND_PORT="${FRONTEND_PORT:-${CLIENT_PORT:-3000}}"
+if [ ! -d server/node_modules ]; then echo "Server dependencies missing; run scripts/bootstrap.sh explicitly." >&2; exit 1; fi
+if [[ "${NODE_ENV:-}" == "test" ]]; then exec env PORT="$BACKEND_PORT" node server/index.js; fi
+if [ ! -d web/node_modules ]; then echo "Web dependencies missing; run scripts/bootstrap.sh explicitly." >&2; exit 1; fi
+for port in "$BACKEND_PORT" "$FRONTEND_PORT"; do if command -v lsof >/dev/null && lsof -ti ":$port" >/dev/null 2>&1; then echo "Port $port is already in use." >&2; exit 1; fi; done
+CLIENT_URL_VALUE="${CLIENT_URL:-}"
+if [[ "${NODE_ENV:-development}" != "production" ]]; then CLIENT_URL_VALUE="${CLIENT_URL_VALUE:-http://127.0.0.1:$FRONTEND_PORT}"; fi
+(cd server && PORT="$BACKEND_PORT" CLIENT_URL="$CLIENT_URL_VALUE" node index.js) & BACKEND_PID=$!
+(cd web && PORT="$FRONTEND_PORT" BROWSER=none REACT_APP_API_URL="${REACT_APP_API_URL:-http://127.0.0.1:$BACKEND_PORT}" npm start) & FRONTEND_PID=$!
+cleanup() { kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true; }; trap cleanup EXIT INT TERM
+wait

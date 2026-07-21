@@ -5,9 +5,9 @@
   "scripts": {
     "start": "bash start.sh",
     "server": "cd server && npx nodemon index.js",
-    "client": "cd client && npm start",
+    "client": "cd web && npm start",
     "seed": "cd server && node seed.js",
-    "install-all": "cd server && npm install && cd ../client && npm install"
+    "install-all": "cd server && npm install && cd ../web && npm install"
   },
   "dependencies": {
     "concurrently": "^8.2.2"
