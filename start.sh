@@ -2,6 +2,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"; cd "$ROOT"
 if [ ! -f .env ]; then echo "Missing .env; configure it before starting." >&2; exit 1; fi
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
 BACKEND_PORT="${BACKEND_PORT:-${PORT:-3001}}"; FRONTEND_PORT="${FRONTEND_PORT:-${CLIENT_PORT:-3000}}"
 if [ ! -d server/node_modules ]; then echo "Server dependencies missing; run scripts/bootstrap.sh explicitly." >&2; exit 1; fi
 if [[ "${NODE_ENV:-}" == "test" ]]; then exec env PORT="$BACKEND_PORT" node server/index.js; fi

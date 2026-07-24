@@ -10,7 +10,11 @@ function parseAIJson(text) {
 }
 
 async function generateWithAI(systemPrompt, userPrompt) {
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  if (!process.env.OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY is required');
+  }
+  const baseUrl = (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
