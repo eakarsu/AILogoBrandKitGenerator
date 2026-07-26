@@ -6,6 +6,14 @@ const pool = require('../config/db');
 const auth = require('../middleware/auth');
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
+router.get('/demo-credentials', (_req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.status(404).json({ error: 'Not found' });
+  const email = process.env.DEMO_EMAIL || process.env.PROVISION_ADMIN_EMAIL;
+  const password = process.env.DEMO_PASSWORD || process.env.PROVISION_ADMIN_PASSWORD;
+  if (!email || !password) return res.status(503).json({ error: 'Demo credentials are not configured' });
+  return res.json({ email, password });
+});
+
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
