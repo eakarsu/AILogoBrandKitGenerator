@@ -1,3 +1,4 @@
+import WorkflowSidebar from './WorkflowSidebar';
 import { useEffect, useState } from 'react';
 import './App.css';
 
@@ -75,11 +76,11 @@ export default function App() {
     </form></main>;
   }
 
-  return <main className="shell">
-    <section className="hero"><div className="account-row"><p className="eyebrow">Authenticated workspace</p><button type="button" onClick={() => { localStorage.removeItem('authToken'); setUser(null); }}>Sign out</button></div>
+  return <div className="codex-nav-shell"><WorkflowSidebar title="LogoBrandKitGenerator" features={FEATURES} /><main className="shell">
+    <section className="hero" id="overview"><div className="account-row"><p className="eyebrow">Authenticated workspace</p><button type="button" onClick={() => { localStorage.removeItem('authToken'); setUser(null); }}>Sign out</button></div>
       <h1>AI Logo &amp; Brand Kit Generator</h1><p className="lede">Welcome, {user.name || user.email}. Your authenticated brand workflow is ready.</p>
       <div className="service service--ready" role="status"><span>Connected</span><p>Backend API and session identity are verified.</p></div>
     </section>
-    <section aria-labelledby="workflow-heading"><h2 id="workflow-heading">Primary workflow</h2><div className="workflow">{FEATURES.map((feature, index) => <article key={feature}><strong>{String(index + 1).padStart(2, '0')}</strong><h3>{feature}</h3><p>Continue this authenticated workflow with auditable saved results.</p></article>)}</div></section>
-  </main>;
+    <section aria-labelledby="workflow-heading"><h2 id="workflow-heading">Primary workflow</h2><div className="workflow">{FEATURES.map((feature, index) => <article key={feature} id={`step-${index + 1}`}><strong>{String(index + 1).padStart(2, '0')}</strong><h3>{feature}</h3><p>Continue this authenticated workflow with auditable saved results.</p></article>)}</div></section>
+  </main></div>;
 }
